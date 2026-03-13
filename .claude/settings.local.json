@@ -14,7 +14,14 @@
       "Bash(source venv/bin/activate && python -c \"\nfrom app.schemas.log import ActivityLogUpdate\nprint\\('annotations:', ActivityLogUpdate.__annotations__\\)\nprint\\('date annotation type:', type\\(ActivityLogUpdate.__annotations__.get\\('date'\\)\\)\\)\n\" 2>&1)",
       "Bash(source venv/bin/activate && python -c \"\nfrom datetime import date, datetime\nfrom typing import Optional\nfrom pydantic import BaseModel\n\nclass TestUpdate\\(BaseModel\\):\n    activity_id: Optional[int] = None\n    date: Optional[date] = None\n    notes: Optional[str] = None\n\nprint\\(TestUpdate.__annotations__\\)\nprint\\(TestUpdate.model_validate\\({'date': '2026-03-12'}\\)\\)\n\" 2>&1)",
       "Bash(source venv/bin/activate && python -c \"\nfrom datetime import date\nfrom typing import Optional\n\nclass Plain:\n    activity_id: Optional[int] = None\n    date: Optional[date] = None\n    notes: Optional[str] = None\n\nprint\\(Plain.__annotations__\\)\n\" 2>&1)",
-      "Bash(source venv/bin/activate && python -c \"\nfrom app.schemas.log import ActivityLogUpdate\nresult = ActivityLogUpdate.model_validate\\({\n    'activity_id': 1,\n    'notes': 'test',\n    'field_values': [{'field_id': 1, 'value': 'Lift'}]\n}\\)\nprint\\('OK:', result\\)\n\" 2>&1)"
+      "Bash(source venv/bin/activate && python -c \"\nfrom app.schemas.log import ActivityLogUpdate\nresult = ActivityLogUpdate.model_validate\\({\n    'activity_id': 1,\n    'notes': 'test',\n    'field_values': [{'field_id': 1, 'value': 'Lift'}]\n}\\)\nprint\\('OK:', result\\)\n\" 2>&1)",
+      "Bash(cd /home/levine/src/abettrme/backend && source venv/bin/activate && pip install -r requirements-dev.txt -q && pytest tests/ -v 2>&1)",
+      "Bash(docker ps:*)",
+      "Bash(docker exec:*)",
+      "Bash(cd /home/levine/src/abettrme/backend && source venv/bin/activate && pytest tests/ -v 2>&1)",
+      "Bash(cd /home/levine/src/abettrme/frontend && npm install --save-dev vitest @testing-library/react @testing-library/user-event @testing-library/jest-dom jsdom 2>&1 | tail -5)",
+      "Bash(node -e \"const p = JSON.parse\\(require\\('fs'\\).readFileSync\\('package.json'\\)\\); p.scripts.test = 'vitest'; require\\('fs'\\).writeFileSync\\('package.json', JSON.stringify\\(p, null, 2\\) + '\\\\n'\\);\")",
+      "Bash(npm test:*)"
     ]
   }
 }
