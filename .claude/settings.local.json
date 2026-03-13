@@ -1,7 +1,20 @@
 {
   "permissions": {
     "allow": [
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(gh issue list:*)",
+      "Bash(cd /home/levine/src/abettrme/backend && source venv/bin/activate && alembic upgrade head 2>&1)",
+      "Bash(cd /home/levine/src/abettrme/backend && source venv/bin/activate && python -c \"\nfrom app.database import engine\nwith engine.connect\\(\\) as conn:\n    result = conn.execute\\(__import__\\('sqlalchemy'\\).text\\(\\\\\"SELECT typname FROM pg_type WHERE typname = 'fieldtype'\\\\\"\\)\\)\n    print\\('enum exists:', result.fetchall\\(\\)\\)\n    result2 = conn.execute\\(__import__\\('sqlalchemy'\\).text\\(\\\\\"SELECT table_name FROM information_schema.tables WHERE table_name IN \\('activity_custom_fields','activity_log_field_values'\\)\\\\\"\\)\\)\n    print\\('tables:', result2.fetchall\\(\\)\\)\n\")",
+      "Bash(source venv/bin/activate && alembic upgrade head 2>&1)",
+      "Bash(source venv/bin/activate && python -c \"from app.main import app; print\\('OK'\\)\" 2>&1)",
+      "Bash(source venv/bin/activate && python -c \"\nfrom app.schemas.activity import ActivityOut\nfrom app.schemas.log import ActivityLogOut, ActivityLogCreate\nfrom app.schemas.field import FieldOut, FieldCreate, FieldValueOut\nprint\\('ActivityOut fields:', [f for f in ActivityOut.model_fields]\\)\nprint\\('ActivityLogOut fields:', [f for f in ActivityLogOut.model_fields]\\)\nprint\\('FieldCreate fields:', [f for f in FieldCreate.model_fields]\\)\n\" 2>&1)",
+      "Bash(cd /home/levine/src/abettrme/frontend && npm run build 2>&1)",
+      "Bash(cd /home/levine/src/abettrme/backend && source venv/bin/activate && python -c \"\nfrom app.schemas.log import ActivityLogUpdate\nimport json\n\npayload = {\n    'activity_id': 1,\n    'date': '2026-03-12',\n    'notes': 'test notes',\n    'field_values': [{'field_id': 1, 'value': 'Lift'}]\n}\nresult = ActivityLogUpdate.model_validate\\(payload\\)\nprint\\('OK:', result\\)\n\" 2>&1)",
+      "Bash(cd /home/levine/src/abettrme/backend && source venv/bin/activate && python -c \"\nfrom app.schemas.log import ActivityLogUpdate\nprint\\(ActivityLogUpdate.model_fields\\)\nprint\\(\\)\nimport typing\nprint\\(typing.get_type_hints\\(ActivityLogUpdate\\)\\)\n\" 2>&1)",
+      "Bash(source venv/bin/activate && python -c \"\nfrom app.schemas.log import ActivityLogUpdate\nprint\\('annotations:', ActivityLogUpdate.__annotations__\\)\nprint\\('date annotation type:', type\\(ActivityLogUpdate.__annotations__.get\\('date'\\)\\)\\)\n\" 2>&1)",
+      "Bash(source venv/bin/activate && python -c \"\nfrom datetime import date, datetime\nfrom typing import Optional\nfrom pydantic import BaseModel\n\nclass TestUpdate\\(BaseModel\\):\n    activity_id: Optional[int] = None\n    date: Optional[date] = None\n    notes: Optional[str] = None\n\nprint\\(TestUpdate.__annotations__\\)\nprint\\(TestUpdate.model_validate\\({'date': '2026-03-12'}\\)\\)\n\" 2>&1)",
+      "Bash(source venv/bin/activate && python -c \"\nfrom datetime import date\nfrom typing import Optional\n\nclass Plain:\n    activity_id: Optional[int] = None\n    date: Optional[date] = None\n    notes: Optional[str] = None\n\nprint\\(Plain.__annotations__\\)\n\" 2>&1)",
+      "Bash(source venv/bin/activate && python -c \"\nfrom app.schemas.log import ActivityLogUpdate\nresult = ActivityLogUpdate.model_validate\\({\n    'activity_id': 1,\n    'notes': 'test',\n    'field_values': [{'field_id': 1, 'value': 'Lift'}]\n}\\)\nprint\\('OK:', result\\)\n\" 2>&1)"
     ]
   }
 }

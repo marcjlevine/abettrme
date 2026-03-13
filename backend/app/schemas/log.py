@@ -1,7 +1,8 @@
 from pydantic import BaseModel
 from datetime import date, datetime
-from typing import Optional
+from typing import Optional, List
 from app.schemas.activity import ActivityOut
+from app.schemas.field import FieldValueIn, FieldValueOut
 
 
 class ActivityLogBase(BaseModel):
@@ -11,13 +12,13 @@ class ActivityLogBase(BaseModel):
 
 
 class ActivityLogCreate(ActivityLogBase):
-    pass
+    field_values: Optional[List[FieldValueIn]] = None
 
 
 class ActivityLogUpdate(BaseModel):
     activity_id: Optional[int] = None
-    date: Optional[date] = None
     notes: Optional[str] = None
+    field_values: Optional[List[FieldValueIn]] = None
 
 
 class ActivityLogOut(BaseModel):
@@ -30,5 +31,6 @@ class ActivityLogOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     activity: Optional[ActivityOut] = None
+    field_values: List[FieldValueOut] = []
 
     model_config = {"from_attributes": True}

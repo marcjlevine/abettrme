@@ -11,6 +11,12 @@ export const createActivity = (data) => api.post("/activities/", data).then((r) 
 export const updateActivity = (id, data) => api.put(`/activities/${id}`, data).then((r) => r.data);
 export const deleteActivity = (id) => api.delete(`/activities/${id}`);
 
+// Activity custom fields
+export const getFields = (activityId) => api.get(`/activities/${activityId}/fields/`).then((r) => r.data);
+export const createField = (activityId, data) => api.post(`/activities/${activityId}/fields/`, data).then((r) => r.data);
+export const updateField = (activityId, fieldId, data) => api.put(`/activities/${activityId}/fields/${fieldId}`, data).then((r) => r.data);
+export const deleteField = (activityId, fieldId) => api.delete(`/activities/${activityId}/fields/${fieldId}`);
+
 // Rewards
 export const getRewards = () => api.get("/rewards/").then((r) => r.data);
 export const createReward = (data) => api.post("/rewards/", data).then((r) => r.data);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import { getLogs, createLog, updateLog, deleteLog, getActivities } from "../lib/api";
@@ -9,14 +9,108 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function LogForm({ initial = {}, activities, onSubmit, onCancel }) {
-  const [activityId, setActivityId] = useState(initial.activity_id ?? (activities[0]?.id ?? ""));
+// ─── Custom field input ───────────────────────────────────────────────────────
+
+function FieldInput({ field, value, onChange }) {
+  if (field.field_type === "select") {
+    return (
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+      >
+        <option value="">— optional —</option>
+        {(field.options ?? []).map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+    );
+  }
+
+  if (field.field_type === "duration") {
+    return (
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="MM:SS or H:MM:SS"
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+      />
+    );
+  }
+
+  if (field.field_type === "number") {
+    return (
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          step="any"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+        />
+        {field.unit && <span className="text-sm text-gray-500 shrink-0">{field.unit}</span>}
+      </div>
+    );
+  }
+
+  // text (default)
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+    />
+  );
+}
+
+// ─── Log form ─────────────────────────────────────────────────────────────────
+
+function LogForm({ initial = {}, activities, isEdit = false, onSubmit, onCancel }) {
+  const [activityId, setActivityId] = useState(
+    String(initial.activity_id ?? (activities[0]?.id ?? ""))
+  );
   const [date, setDate] = useState(initial.date ?? today());
   const [notes, setNotes] = useState(initial.notes ?? "");
+  const [fieldValues, setFieldValues] = useState({});
+
+  // The selected activity object
+  const selectedActivity = activities.find((a) => String(a.id) === String(activityId));
+  const activeFields = selectedActivity?.fields ?? [];
+
+  // When editing an existing log, pre-fill field values from existing data
+  useEffect(() => {
+    const prefill = {};
+    if (initial.field_values) {
+      for (const fv of initial.field_values) {
+        // Only prefill for fields that are still active
+        if (activeFields.some((f) => f.id === fv.field_id)) {
+          prefill[fv.field_id] = fv.value;
+        }
+      }
+    }
+    setFieldValues(prefill);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activityId]);
+
+  const setFieldValue = (fieldId, value) => {
+    setFieldValues((prev) => ({ ...prev, [fieldId]: value }));
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit({ activity_id: Number(activityId), date, notes: notes || null });
+    const field_values = activeFields
+      .filter((f) => fieldValues[f.id] !== undefined && fieldValues[f.id] !== "")
+      .map((f) => ({ field_id: f.id, value: String(fieldValues[f.id]) }));
+
+    const payload = {
+      activity_id: Number(activityId),
+      notes: notes || null,
+      field_values: field_values.length > 0 ? field_values : null,
+    };
+    if (!isEdit) payload.date = date;
+    onSubmit(payload);
   };
 
   return (
@@ -36,16 +130,18 @@ function LogForm({ initial = {}, activities, onSubmit, onCancel }) {
           ))}
         </select>
       </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
-        <input
-          required
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-        />
-      </div>
+      {!isEdit && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+          <input
+            required
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          />
+        </div>
+      )}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
         <textarea
@@ -55,6 +151,25 @@ function LogForm({ initial = {}, activities, onSubmit, onCancel }) {
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
         />
       </div>
+
+      {activeFields.length > 0 && (
+        <div className="border-t border-gray-100 pt-4 space-y-3">
+          {activeFields.map((f) => (
+            <div key={f.id}>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {f.name}
+                <span className="text-gray-400 font-normal ml-1">(optional)</span>
+              </label>
+              <FieldInput
+                field={f}
+                value={fieldValues[f.id] ?? ""}
+                onChange={(val) => setFieldValue(f.id, val)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50">
           Cancel
@@ -66,6 +181,8 @@ function LogForm({ initial = {}, activities, onSubmit, onCancel }) {
     </form>
   );
 }
+
+// ─── Log page ─────────────────────────────────────────────────────────────────
 
 export default function Log() {
   const qc = useQueryClient();
@@ -124,9 +241,9 @@ export default function Log() {
 
       <ul className="space-y-2">
         {logs.map((entry) => (
-          <li key={entry.id} className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-4">
+          <li key={entry.id} className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-start gap-4">
             <span
-              className={`text-lg font-bold w-16 text-right tabular-nums shrink-0 ${
+              className={`text-lg font-bold w-16 text-right tabular-nums shrink-0 mt-0.5 ${
                 entry.points_snapshot >= 0 ? "text-brand-600" : "text-red-500"
               }`}
             >
@@ -136,6 +253,25 @@ export default function Log() {
               <p className="font-medium text-gray-900">{entry.activity?.name ?? `Activity #${entry.activity_id}`}</p>
               <p className="text-xs text-gray-400">{entry.date}</p>
               {entry.notes && <p className="text-sm text-gray-500 mt-0.5">{entry.notes}</p>}
+              {entry.field_values?.length > 0 && (
+                <dl className="mt-1.5 space-y-0.5">
+                  {entry.field_values.map((fv) => (
+                    <div key={fv.id} className="flex gap-1.5 text-sm">
+                      <dt className="text-gray-400 shrink-0">
+                        {fv.field?.name ?? "Unknown field"}
+                        {fv.field?.deleted_at && (
+                          <span className="text-xs text-gray-300 ml-1">(deleted)</span>
+                        )}
+                        :
+                      </dt>
+                      <dd className="text-gray-700">
+                        {fv.value}
+                        {fv.field?.unit && <span className="text-gray-400 ml-1">{fv.field.unit}</span>}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
             </div>
             <div className="flex gap-2 shrink-0">
               <button onClick={() => setModal({ mode: "edit", log: entry })} className="p-1.5 text-gray-400 hover:text-brand-600 rounded">
@@ -154,6 +290,7 @@ export default function Log() {
           <LogForm
             initial={modal.log}
             activities={activities}
+            isEdit={modal.mode === "edit"}
             onSubmit={handleSubmit}
             onCancel={() => setModal(null)}
           />

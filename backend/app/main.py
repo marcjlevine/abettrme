@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import activities, rewards, logs, redemptions, progress
+from app.routers import activities, rewards, logs, redemptions, progress, fields
 
 app = FastAPI(title="A Bettr Me API", version="0.1.0")
 
@@ -14,6 +14,7 @@ app.add_middleware(
 )
 
 app.include_router(activities.router)
+app.include_router(fields.router)
 app.include_router(rewards.router)
 app.include_router(logs.router)
 app.include_router(redemptions.router)
