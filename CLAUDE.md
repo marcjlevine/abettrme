@@ -59,3 +59,7 @@ Activities have a `points` field that can be positive or negative (good habits v
 ### API → Frontend Proxy
 
 Vite proxies `/api/*` → `http://localhost:8000/*`, stripping the `/api` prefix. All frontend API calls use relative `/api/...` paths — no hardcoded backend URLs.
+
+## Tests
+
+All logic should be covered by unit tests.  Unit tests should only directly assert on public methods/functions - all logic should be tested by going through those.

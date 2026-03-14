@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { useQuery } from "@tanstack/react-query";
 import { getProgressSummary, getProgressLogs, getProgressRedemptions } from "../lib/api";
 
@@ -34,6 +35,14 @@ export default function Progress() {
     const da = a.date || a.redeemed_at?.slice(0, 10) || "";
     const db = b.date || b.redeemed_at?.slice(0, 10) || "";
     return db.localeCompare(da);
+  });
+
+  const listRef = useRef(null);
+  const virtualizer = useWindowVirtualizer({
+    count: timeline.length,
+    estimateSize: () => 62,
+    overscan: 5,
+    scrollMargin: listRef.current?.offsetTop ?? 0,
   });
 
   return (
@@ -81,39 +90,53 @@ export default function Progress() {
         <p className="text-gray-400 text-center py-12">No entries in this date range.</p>
       )}
 
-      <ul className="space-y-2">
-        {timeline.map((item) => {
-          if (item._type === "log") {
+      <div ref={listRef}>
+        <div style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}>
+          {virtualizer.getVirtualItems().map((virtualItem) => {
+            const item = timeline[virtualItem.index];
             return (
-              <li key={`log-${item.id}`} className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-4">
-                <span className={`text-base font-bold w-16 text-right tabular-nums shrink-0 ${item.points_snapshot >= 0 ? "text-brand-600" : "text-red-500"}`}>
-                  {item.points_snapshot > 0 ? "+" : ""}{item.points_snapshot}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900">{item.activity?.name ?? `Activity #${item.activity_id}`}</p>
-                  {item.notes && <p className="text-sm text-gray-500">{item.notes}</p>}
-                </div>
-                <span className="text-xs text-gray-400 shrink-0">{item.date}</span>
-              </li>
-            );
-          }
-          // redemption
-          return (
-            <li key={`rdm-${item.id}`} className="bg-amber-50 rounded-xl border border-amber-200 px-4 py-3 flex items-center gap-4">
-              <span className="text-base font-bold w-16 text-right tabular-nums shrink-0 text-amber-600">
-                -{item.points_snapshot}
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900">
-                  Redeemed: {item.reward?.name ?? `Reward #${item.reward_id}`}
-                </p>
-                {item.notes && <p className="text-sm text-gray-500">{item.notes}</p>}
+              <div
+                key={item._type === "log" ? `log-${item.id}` : `rdm-${item.id}`}
+                data-index={virtualItem.index}
+                ref={virtualizer.measureElement}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  transform: `translateY(${virtualItem.start - virtualizer.options.scrollMargin}px)`,
+                }}
+              >
+                {item._type === "log" ? (
+                  <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-4 mb-2">
+                    <span className={`text-base font-bold w-16 text-right tabular-nums shrink-0 ${item.points_snapshot >= 0 ? "text-brand-600" : "text-red-500"}`}>
+                      {item.points_snapshot > 0 ? "+" : ""}{item.points_snapshot}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900">{item.activity?.name ?? `Activity #${item.activity_id}`}</p>
+                      {item.notes && <p className="text-sm text-gray-500">{item.notes}</p>}
+                    </div>
+                    <span className="text-xs text-gray-400 shrink-0">{item.date}</span>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 rounded-xl border border-amber-200 px-4 py-3 flex items-center gap-4 mb-2">
+                    <span className="text-base font-bold w-16 text-right tabular-nums shrink-0 text-amber-600">
+                      -{item.points_snapshot}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900">
+                        Redeemed: {item.reward?.name ?? `Reward #${item.reward_id}`}
+                      </p>
+                      {item.notes && <p className="text-sm text-gray-500">{item.notes}</p>}
+                    </div>
+                    <span className="text-xs text-gray-400 shrink-0">{item.date}</span>
+                  </div>
+                )}
               </div>
-              <span className="text-xs text-gray-400 shrink-0">{item.date}</span>
-            </li>
-          );
-        })}
-      </ul>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

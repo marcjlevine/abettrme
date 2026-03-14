@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import { getLogs, createLog, updateLog, deleteLog, getActivities } from "../lib/api";
@@ -219,6 +220,14 @@ export default function Log() {
 
   const noActivities = activities.length === 0;
 
+  const listRef = useRef(null);
+  const virtualizer = useWindowVirtualizer({
+    count: logs.length,
+    estimateSize: () => 72,
+    overscan: 5,
+    scrollMargin: listRef.current?.offsetTop ?? 0,
+  });
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -239,51 +248,69 @@ export default function Log() {
         <p className="text-gray-400 text-center py-12">No entries yet. Start logging your activities!</p>
       )}
 
-      <ul className="space-y-2">
-        {logs.map((entry) => (
-          <li key={entry.id} className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-start gap-4">
-            <span
-              className={`text-lg font-bold w-16 text-right tabular-nums shrink-0 mt-0.5 ${
-                entry.points_snapshot >= 0 ? "text-brand-600" : "text-red-500"
-              }`}
-            >
-              {entry.points_snapshot > 0 ? "+" : ""}{entry.points_snapshot}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-gray-900">{entry.activity?.name ?? `Activity #${entry.activity_id}`}</p>
-              <p className="text-xs text-gray-400">{entry.date}</p>
-              {entry.notes && <p className="text-sm text-gray-500 mt-0.5">{entry.notes}</p>}
-              {entry.field_values?.length > 0 && (
-                <dl className="mt-1.5 space-y-0.5">
-                  {entry.field_values.map((fv) => (
-                    <div key={fv.id} className="flex gap-1.5 text-sm">
-                      <dt className="text-gray-400 shrink-0">
-                        {fv.field?.name ?? "Unknown field"}
-                        {fv.field?.deleted_at && (
-                          <span className="text-xs text-gray-300 ml-1">(deleted)</span>
-                        )}
-                        :
-                      </dt>
-                      <dd className="text-gray-700">
-                        {fv.value}
-                        {fv.field?.unit && <span className="text-gray-400 ml-1">{fv.field.unit}</span>}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
-            </div>
-            <div className="flex gap-2 shrink-0">
-              <button onClick={() => setModal({ mode: "edit", log: entry })} className="p-1.5 text-gray-400 hover:text-brand-600 rounded">
-                <Pencil size={16} />
-              </button>
-              <button onClick={() => setDeleteTarget(entry)} className="p-1.5 text-gray-400 hover:text-red-500 rounded">
-                <Trash2 size={16} />
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div ref={listRef}>
+        <div style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}>
+          {virtualizer.getVirtualItems().map((virtualItem) => {
+            const entry = logs[virtualItem.index];
+            return (
+              <div
+                key={entry.id}
+                data-index={virtualItem.index}
+                ref={virtualizer.measureElement}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  transform: `translateY(${virtualItem.start - virtualizer.options.scrollMargin}px)`,
+                }}
+              >
+                <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-start gap-4 mb-2">
+                  <span
+                    className={`text-lg font-bold w-16 text-right tabular-nums shrink-0 mt-0.5 ${
+                      entry.points_snapshot >= 0 ? "text-brand-600" : "text-red-500"
+                    }`}
+                  >
+                    {entry.points_snapshot > 0 ? "+" : ""}{entry.points_snapshot}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900">{entry.activity?.name ?? `Activity #${entry.activity_id}`}</p>
+                    <p className="text-xs text-gray-400">{entry.date}</p>
+                    {entry.notes && <p className="text-sm text-gray-500 mt-0.5">{entry.notes}</p>}
+                    {entry.field_values?.length > 0 && (
+                      <dl className="mt-1.5 space-y-0.5">
+                        {entry.field_values.map((fv) => (
+                          <div key={fv.id} className="flex gap-1.5 text-sm">
+                            <dt className="text-gray-400 shrink-0">
+                              {fv.field?.name ?? "Unknown field"}
+                              {fv.field?.deleted_at && (
+                                <span className="text-xs text-gray-300 ml-1">(deleted)</span>
+                              )}
+                              :
+                            </dt>
+                            <dd className="text-gray-700">
+                              {fv.value}
+                              {fv.field?.unit && <span className="text-gray-400 ml-1">{fv.field.unit}</span>}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    )}
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => setModal({ mode: "edit", log: entry })} className="p-1.5 text-gray-400 hover:text-brand-600 rounded">
+                      <Pencil size={16} />
+                    </button>
+                    <button onClick={() => setDeleteTarget(entry)} className="p-1.5 text-gray-400 hover:text-red-500 rounded">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {modal && (
         <Modal title={modal.mode === "create" ? "Log Activity" : "Edit Entry"} onClose={() => setModal(null)}>
